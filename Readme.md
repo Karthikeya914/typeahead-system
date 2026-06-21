@@ -91,8 +91,6 @@ Fetches the top 5 global trending searches based on the blended recency score.
 Diagnostic endpoint to verify the Consistent Hashing router's behavior and cache hit/miss status for a specific prefix.
 
 ## Video-Demo
-
-
 https://github.com/user-attachments/assets/171670ee-034c-4ba1-91b1-0bf99fdc78bb
 
 
