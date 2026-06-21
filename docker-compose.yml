@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  redis-node-a:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  redis-node-b:
+    image: redis:alpine
+    ports:
+      - "6380:6379"
+  redis-node-c:
+    image: redis:alpine
+    ports:
+      - "6381:6379"

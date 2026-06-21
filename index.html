@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typeahead System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #121212;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 100px;
+            margin: 0;
+        }
+
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1e1e1e;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        .search-input:focus {
+            border-color: #ff9800;
+            outline: none;
+        }
+
+        .suggestions-panel {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: none;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .suggestion-item.active,
+        .suggestion-item:hover {
+            background: #333;
+            color: #ff9800;
+        }
+
+        .trending-box {
+            margin-top: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .trend-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .trend-tag {
+            background: #2a2a2a;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            color: #ff9800;
+        }
+
+        .trend-tag:hover {
+            background: #ff9800;
+            color: #121212;
+        }
+
+        .status-log {
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            border-radius: 8px;
+            color: #ff9800;
+            font-family: monospace;
+            font-size: 0.9rem;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            display: none;
+            /* Hidden by default */
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Search Typeahead</h2>
+    <div class="search-wrapper">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search wraps, controllers, desks..."
+            autocomplete="off">
+        <div class="suggestions-panel" id="suggestionsBox"></div>
+        <div style="text-align: center; margin-bottom: 20px;">
+        <p style="color: #888; font-size: 0.9rem; margin-top: 5px;">
+            * MVP Constraint: Type at least 3 characters to load suggestions
+        </p>
+    </div>
+    </div>
+    
+
+    <div class="status-log" id="statusBox"></div>
+
+    <div class="trending-box">
+        <h3 style="color: #888;">🔥 Trending Now</h3>
+        <div class="trend-tags" id="trendTags"></div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsBox = document.getElementById('suggestionsBox');
+        let debounceTimer;
+        let activeIndex = -1;
+        let currentSuggestions = [];
+
+        // 1. Fetch Suggestions (Debounced)
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            const prefix = e.target.value.trim();
+            activeIndex = -1;
+
+            if (prefix.length < 3) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                const res = await fetch(`http://localhost:3000/suggest?q=${encodeURIComponent(prefix)}`);
+                currentSuggestions = await res.json();
+
+                if (currentSuggestions.length > 0) {
+                    suggestionsBox.innerHTML = currentSuggestions.map((item, index) =>
+                        `<div class="suggestion-item" onclick="submitSearch('${item}')" data-index="${index}">🔍 ${item}</div>`
+                    ).join('');
+                    suggestionsBox.style.display = 'block';
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            }, 300); // 300ms wait before hitting the API
+        });
+
+        // 2. Keyboard Navigation
+        searchInput.addEventListener('keydown', (e) => {
+            const items = document.querySelectorAll('.suggestion-item');
+            if (e.key === 'ArrowDown' && activeIndex < currentSuggestions.length - 1) {
+                activeIndex++;
+            } else if (e.key === 'ArrowUp' && activeIndex > 0) {
+                activeIndex--;
+            } else if (e.key === 'Enter') {
+                const query = activeIndex >= 0 ? currentSuggestions[activeIndex] : searchInput.value;
+                submitSearch(query);
+                return;
+            }
+
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === activeIndex);
+            });
+        });
+
+        // 3. Submit Search (Updated with Visual Feedback)
+        async function submitSearch(query) {
+            searchInput.value = query;
+            suggestionsBox.style.display = 'none';
+
+            // Hit the backend
+            await fetch('http://localhost:3000/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
+            // Grab the status box element
+            const statusBox = document.getElementById('statusBox');
+
+            // Display the flushing message
+            statusBox.style.display = 'block';
+            statusBox.innerHTML = `> Query "${query}" captured!<br>> Queued in Node.js buffer. Awaiting next batch flush to DB...`;
+
+            // Hide the message after 4 seconds and clear the input
+            setTimeout(() => {
+                statusBox.style.display = 'none';
+                searchInput.value = '';
+            }, 4000);
+        }
+        // 4. Load Trends on Start
+        window.addEventListener('DOMContentLoaded', async () => {
+            const res = await fetch('http://localhost:3000/trending');
+            const trends = await res.json();
+            document.getElementById('trendTags').innerHTML = trends.map(term =>
+                `<span class="trend-tag" onclick="submitSearch('${term}')">${term}</span>`
+            ).join('');
+        });
+
+        // Hide dropdown on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) suggestionsBox.style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>
