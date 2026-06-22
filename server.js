@@ -15,7 +15,7 @@ rawData.forEach(item => {
     // We maintain a totalCount and a recentCount to handle the "Trending Searches" logic later
     db[item.query.toLowerCase()] = { totalCount: item.count, recentCount: 0 };
 });
-console.log(`Loaded ${Object.keys(db).length} records into primary DB.`);
+console.log(⁠ Loaded ${Object.keys(db).length} records into primary DB. ⁠);
 
 // --- 2. CONNECT TO MULTIPLE REDIS NODES ---
 const REDIS_CONFIGS = [
@@ -27,10 +27,10 @@ const REDIS_CONFIGS = [
 const redisClients = {};
 REDIS_CONFIGS.forEach(cfg => {
     const client = createClient({ url: cfg.url });
-    client.on('error', (err) => console.error(`Redis ${cfg.name} Error`, err));
+    client.on('error', (err) => console.error(⁠ Redis ${cfg.name} Error ⁠, err));
     
     // Asynchronously connect to each node
-    client.connect().then(() => console.log(`Connected to Cache: ${cfg.name}`));
+    client.connect().then(() => console.log(⁠ Connected to Cache: ${cfg.name} ⁠));
     redisClients[cfg.name] = client;
 });
 
@@ -122,6 +122,7 @@ app.get('/trending', (req, res) => {
 
     res.json(globalTrends);
 });
+
 // GET /cache/debug?prefix=<prefix>
 // Diagnostic endpoint to verify the Consistent Hashing router's behavior
 app.get('/cache/debug', async (req, res) => {
@@ -146,6 +147,7 @@ app.get('/cache/debug', async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
 // --- 6. BACKGROUND WORKERS ---
 
 // The Batch Writer (Runs every 10 seconds)
@@ -153,7 +155,7 @@ setInterval(async () => {
     const keys = Object.keys(writeBuffer);
     if (keys.length === 0) return;
 
-    console.log(`[Batch Writer] Flushing ${keys.length} new searches to primary DB...`);
+    console.log(⁠ [Batch Writer] Flushing ${keys.length} new searches to primary DB... ⁠);
     
     for (const query of keys) {
         // 1. Update the primary database
@@ -188,4 +190,4 @@ setInterval(() => {
 }, 3600000);
 
 const PORT = 3000;
-app.listen(PORT, () => console.log(`Typeahead Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(⁠ Typeahead Server running on port ${PORT} ⁠));
