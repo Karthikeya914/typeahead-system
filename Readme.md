@@ -1,7 +1,7 @@
 Here is an alternative version of the README. This version is structured specifically as a technical assignment submission, explicitly mapping your system's features to the grading rubric and highlighting the unique dataset.
 
 
-# 🏎️ Distributed Typeahead API: Sim Racing & Custom Setups
+# TypeAhead
 
 A high-performance, low-latency search typeahead system designed to handle massive read/write scale. This project implements a distributed caching layer, write-batching, and recency-aware ranking.
 
