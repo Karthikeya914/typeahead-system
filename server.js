@@ -122,7 +122,30 @@ app.get('/trending', (req, res) => {
 
     res.json(globalTrends);
 });
+// GET /cache/debug?prefix=<prefix>
+// Diagnostic endpoint to verify the Consistent Hashing router's behavior
+app.get('/cache/debug', async (req, res) => {
+    const prefix = (req.query.prefix || '').toLowerCase().trim();
+    
+    if (!prefix) {
+        return res.status(400).json({ error: "Prefix query parameter is required" });
+    }
 
+    const targetNode = getCacheNode(prefix);
+
+    try {
+        const cachedData = await redisClients[targetNode].get(prefix);
+        return res.json({
+            prefix: prefix,
+            assignedNode: targetNode,
+            cacheStatus: cachedData ? "HIT" : "MISS",
+            cachedResults: cachedData ? JSON.parse(cachedData) : null
+        });
+    } catch (err) {
+        console.error("Debug Cache Error", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 // --- 6. BACKGROUND WORKERS ---
 
 // The Batch Writer (Runs every 10 seconds)
